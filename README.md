@@ -22,11 +22,11 @@ A simple bash shell script profiler.
 
 ## :art: Features
 
-+ What an amazing thing!
++ Simple
 
 ## :straight_ruler: Prerequisite
 
-> + Simple
+> + awk
 
 ## :rocket: Installation
 
