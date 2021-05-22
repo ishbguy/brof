@@ -90,6 +90,7 @@ EOF
     [[ ${opts[D]} ]] && set -x
 
     ensure "[[ $# -ge 1 ]]" "Need a bash shell script filename!"
+    ensure "[[ -e $1 ]]" "$1 is not exist!"
 
     
     # execute in subshell
