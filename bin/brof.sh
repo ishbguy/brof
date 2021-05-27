@@ -65,6 +65,49 @@ require_var() { require defined "You need to define vars" "$@"; }
 require_func() { require definedf "You need to define funcs" "$@"; }
 require_tool() { require has_tool "You need to install tools" "$@"; }
 
+profile() {
+    awk '
+BEGIN {
+    PROCINFO["sorted_in"]="@val_num_asc"
+}
+/^\+/ {
+    # refresh vars with new record
+    this_time = $2
+    this_func = $3
+    this_call = $4
+
+    # first init last vars
+    if (NR == 1) {
+        last_time = this_time
+        last_func = this_func
+        last_call = this_call
+    }
+
+    # count function call and sum time comsumed
+    if (this_func == last_call) {
+        count[this_func]++
+        call_stack[this_func]=1
+    } else if (this_func != last_func) {
+        delete call_stack[last_func]
+    }
+    for (f in call_stack) {
+        cost[f] += 0 + this_time - last_time
+    }
+    sum += this_time - last_time
+
+    # refresh last record
+    last_time = this_time
+    last_func = this_func
+    last_call = this_call
+}
+END {
+    printf("%-20s\tCount\tTotal-Cost\tAverage-Cost\tPercent\n", "Function")
+    for (f in cost) {
+        printf("%-20s\t%-5d\t%f\t%f\t%f\n", f, count[f], cost[f], cost[f]/(count[f]>0?count[f]:1), cost[f]/sum)
+    }
+}'
+}
+
 brof() {
     local PROGNAME="$(basename "${BASH_SOURCE[0]}")"
     local VERSION="v0.1.0"
@@ -90,47 +133,14 @@ EOF
     [[ ${opts[D]} ]] && set -x
 
     ensure "[[ $# -ge 1 ]]" "Need a bash shell script filename!"
-    ensure "[[ -e $1 ]]" "$1 is not exist!"
+    ensure "[[ -e $1 ]]" "$1 does not exist!"
 
     
     # execute in subshell
     (
         PS4='+ $(date +%s.%N) ${FUNCNAME[1]} ${FUNCNAME[0]} : '
         bash -x "$@" 2>&1
-    ) | awk '
-    BEGIN {
-        PROCINFO["sorted_in"]="@val_num_asc"
-    }
-    /^\+/ {
-        this_time = $2
-        this_func = $3
-        this_call = $4
-        if (last_time == 0)
-            last_time = this_time 
-        if (last_func == "")
-            last_func = this_func
-        if (last_call == "")
-            last_call = this_call
-        if (this_func == last_call) {
-            count[this_func]++
-            call_stack[this_func]=1
-        } else if (this_func != last_func) {
-            delete call_stack[last_func]
-        }
-        for (f in call_stack) {
-            cost[f] += 0 + this_time - last_time
-        }
-        sum += this_time - last_time
-        last_time = this_time
-        last_func = this_func
-        last_call = this_call
-    }
-    END {
-        printf("%-20s\tCount\tTotal-Cost\tAverage-Cost\tPercent\n", "Function")
-        for (f in cost) {
-            printf("%-20s\t%-5d\t%f\t%f\t%f\n", f, count[f], cost[f], cost[f]/(count[f]>0?count[f]:1), cost[f]/sum)
-        }
-    }'
+    ) | profile
 }
 
 is_sourced || brof "$@"
