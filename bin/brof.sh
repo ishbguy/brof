@@ -72,33 +72,33 @@ BEGIN {
 }
 /^\+/ {
     # refresh vars with new record
-    this_time = $2
-    this_func = $3
-    this_call = $4
+    time = $2
+    prev = $3
+    curr = $4
 
     # first init last vars
     if (NR == 1) {
-        last_time = this_time
-        last_func = this_func
-        last_call = this_call
+        last_time = time
+        last_prev = prev
+        last_curr = curr
     }
 
     # count function call and sum time comsumed
-    if (this_func == last_call) {
-        count[this_func]++
-        call_stack[this_func]=1
-    } else if (this_func != last_func) {
-        delete call_stack[last_func]
+    if (prev == last_curr) {
+        count[prev]++
+        call_stack[prev]=1
+    } else if (prev != last_prev) {
+        delete call_stack[last_prev]
     }
     for (f in call_stack) {
-        cost[f] += 0 + this_time - last_time
+        cost[f] += 0 + time - last_time
     }
-    sum += this_time - last_time
+    sum += time - last_time
 
     # refresh last record
-    last_time = this_time
-    last_func = this_func
-    last_call = this_call
+    last_time = time
+    last_prev = prev
+    last_curr = curr
 }
 END {
     printf("%-20s\tCount\tTotal-Cost\tAverage-Cost\tPercent\n", "Function")
