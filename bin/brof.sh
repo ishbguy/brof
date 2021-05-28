@@ -81,17 +81,30 @@ BEGIN {
         last_time = time
         last_prev = prev
         last_curr = curr
+        count["main"]++
+        stack["main"] = "NULL"
     }
 
     # count function call and sum time comsumed
-    if (prev == last_curr) {
-        count[prev]++
-        call_stack[prev]=1
-    } else if (prev != last_prev) {
-        delete call_stack[last_prev]
+    if (last_curr == prev) {
+        # call a function
+        count[curr]++
+        stack[curr] = prev
+    } else if (last_prev == curr) {
+        # exit a function
+        delete stack[last_curr]
+    } else if (last_curr != curr) {
+        # exit more than a function
+        caller = stack[last_curr]
+        delete stack[last_curr]
+        while (caller != curr) {
+            tmp = stack[caller]
+            delete stack[caller]
+            caller = tmp
+        }
     }
-    for (f in call_stack) {
-        cost[f] += 0 + time - last_time
+    for (f in stack) {
+        cost[f] += time - last_time
     }
     sum += time - last_time
 
