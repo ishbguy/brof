@@ -135,10 +135,9 @@ EOF
     ensure "[[ $# -ge 1 ]]" "Need a bash shell script filename!"
     ensure "[[ -e $1 ]]" "$1 does not exist!"
 
-    
     # execute in subshell
     (
-        PS4='+ $(date +%s.%N) ${FUNCNAME[1]} ${FUNCNAME[0]} : '
+        PS4='+ $(date +%s.%N) $([ -z ${FUNCNAME[1]} ] && echo "NULL main" || echo "${FUNCNAME[1]} ${FUNCNAME[0]}") : '
         bash -x "$@" 2>&1
     ) | profile
 }
