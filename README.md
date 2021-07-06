@@ -22,7 +22,7 @@ A simple bash shell script profiler.
 
 ## :art: Features
 
-+ Simple
++ Flat profile
 
 ## :straight_ruler: Prerequisite
 

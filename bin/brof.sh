@@ -116,7 +116,7 @@ BEGIN {
 END {
     printf("%-20s\tCount\tTotal-Cost\tAverage-Cost\tPercent\n", "Function")
     for (f in cost) {
-        printf("%-20s\t%-5d\t%f\t%f\t%f\n", f, count[f], cost[f], cost[f]/(count[f]>0?count[f]:1), cost[f]/sum)
+        printf("%-20s\t%-5d\t%f\t%f\t%f\n", f, count[f], cost[f], cost[f]/(count[f]>0?count[f]:1), cost[f]/(sum>0?sum:1))
     }
 }'
 }
