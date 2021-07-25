@@ -65,60 +65,40 @@ require_var() { require defined "You need to define vars" "$@"; }
 require_func() { require definedf "You need to define funcs" "$@"; }
 require_tool() { require has_tool "You need to install tools" "$@"; }
 
-profile() {
+flat_prof() {
     awk '
-BEGIN {
-    PROCINFO["sorted_in"]="@val_num_asc"
-}
-/^\+/ {
-    # refresh vars with new record
-    time = $2
-    prev = $3
-    curr = $4
-
-    # first init last vars
-    if (NR == 1) {
-        last_time = time
-        last_prev = prev
-        last_curr = curr
-        count["main"]++
-        stack["main"] = "NULL"
-    }
-
-    # count function call and sum time comsumed
-    if (last_curr == prev) {
-        # call a function
-        count[curr]++
-        stack[curr] = prev
-    } else if (last_prev == curr) {
-        # exit a function
-        delete stack[last_curr]
-    } else if (last_curr != curr) {
-        # exit more than a function
-        caller = stack[last_curr]
-        delete stack[last_curr]
-        while (caller != curr) {
-            tmp = stack[caller]
-            delete stack[caller]
-            caller = tmp
+    BEGIN { PROCINFO["sorted_in"]="@val_num_desc" }
+    {
+        if (NR == 1) {
+            lasttime = $2
+            lastcall = $3
+            call["main"]++
         }
+        duration = $2 - lasttime
+        split($3, callstack, ",")
+        for (i in callstack) {
+            if (i == 1 && length($3) > length(lastcall)) call[callstack[i]]++
+            time[callstack[i]] += duration
+        }
+        self_time[callstack[1]] += duration
+        sum += duration
+        lasttime = $2
+        lastcall = $3
     }
-    for (f in stack) {
-        cost[f] += time - last_time
-    }
-    sum += time - last_time
-
-    # refresh last record
-    last_time = time
-    last_prev = prev
-    last_curr = curr
-}
-END {
-    printf("%-20s\tCount\tTotal-Cost\tAverage-Cost\tPercent\n", "Function")
-    for (f in cost) {
-        printf("%-20s\t%-5d\t%f\t%f\t%f\n", f, count[f], cost[f], cost[f]/(count[f]>0?count[f]:1), cost[f]/(sum>0?sum:1))
-    }
-}'
+    END {
+        printf("%Time  Calls  Self-SUM  Self-AVG   Run-SUM   Run-AVG  Name\n")
+        printf("----------------------------------------------------------\n")
+        for (f in self_time) {
+            name    = f
+            calls   = call[f]
+            ttime   = time[f]
+            attime  = time[f] / (call[f] > 0 ? call[f] : 1)
+            stime   = self_time[f]
+            astime  = self_time[f] / (call[f] > 0 ? call[f] : 1)
+            percent = self_time[f] / (sum > 0 ? sum : 1) *100
+            printf("%5.2f  %5d  %f  %f  %f  %f  %-s\n", percent, calls, stime, astime, ttime, attime, name)
+        }
+    }'
 }
 
 brof() {
@@ -148,11 +128,12 @@ EOF
     ensure "[[ $# -ge 1 ]]" "Need a bash shell script filename!"
     ensure "[[ -e $1 ]]" "$1 does not exist!"
 
-    # execute in subshell
+    # run in subshell
     (
-        PS4='+ $(date +%s.%N) $([ -z ${FUNCNAME[1]} ] && echo "NULL main" || echo "${FUNCNAME[1]} ${FUNCNAME[0]}") : '
-        bash -x "$@" 2>&1
-    ) | profile
+        set -e -o pipefail
+        PS4='+ $(echo $(date +%s.%N) $(IFS=, ; [ -z ${FUNCNAME[1]} ] && echo main || echo "${FUNCNAME[*]}")) '
+        bash -x "$@" 2>&1 >/dev/null | grep -P '^\+' | flat_prof
+    )
 }
 
 is_sourced || brof "$@"
